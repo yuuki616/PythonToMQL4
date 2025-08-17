@@ -1,3 +1,4 @@
 # PythonToMQL4
 
 grid_chisiki.pyをMT4用EAに変換するプロジェクト
+Pythonの内容を過不足なくMT4用EAに変換してください
