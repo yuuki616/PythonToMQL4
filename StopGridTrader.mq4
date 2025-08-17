@@ -86,6 +86,11 @@ void HandlePartial(int ticket, int type, double openPrice)
    double bid = MarketInfo(SymbolName, MODE_BID);
    if (!OrderSelect(ticket, SELECT_BY_TICKET)) return;
 
+   int digits = (int)MarketInfo(SymbolName, MODE_DIGITS);
+   // break-even price rounded to user-specified digits, then to symbol digits
+   double be      = NormalizeDouble(openPrice, PriceDigits);
+   double bePrice = NormalizeDouble(be, digits);
+
    string comment = OrderComment();
 
    if (StringFind(comment, "BE-REV", 0) == 0)
@@ -98,22 +103,20 @@ void HandlePartial(int ticket, int type, double openPrice)
             Print("OrderClose failed: ", GetLastError());
          return;
       }
-      int digits = (int)MarketInfo(SymbolName, MODE_DIGITS);
       double midTP = NormalizeDouble(MidPrice, digits);
-      if (!OrderModify(ticket, openPrice, openPrice, midTP, 0, clrYellow))
+      if (!OrderModify(ticket, bePrice, bePrice, midTP, 0, clrYellow))
          Print("OrderModify failed: ", GetLastError());
    }
    else
    {
       // move SL to break-even and remove TP
-      if (!OrderModify(ticket, openPrice, openPrice, 0, 0, clrYellow))
+      if (!OrderModify(ticket, bePrice, bePrice, 0, 0, clrYellow))
          Print("OrderModify failed: ", GetLastError());
 
       // place reverse stop at break-even
       int    revType = (type == OP_BUY) ? OP_SELLSTOP : OP_BUYSTOP;
-      int    digits  = (int)MarketInfo(SymbolName, MODE_DIGITS);
-      double sl      = NormalizeDouble((type == OP_BUY) ? openPrice + StepPts : openPrice - StepPts, digits);
-      int revTicket = OrderSend(SymbolName, revType, BaseLot, openPrice, DEVIATION, sl, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
+      double sl      = NormalizeDouble((type == OP_BUY) ? bePrice + StepPts : bePrice - StepPts, digits);
+      int revTicket = OrderSend(SymbolName, revType, BaseLot, bePrice, DEVIATION, sl, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
       if (revTicket < 0)
          Print("OrderSend failed: ", GetLastError());
    }
