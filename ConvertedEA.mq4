@@ -1,8 +1,8 @@
 #property strict
 
-extern int    InpMagic=12112;
+extern int    InpMagic=0;
 extern double InpBaseLot=0.02;
-extern int    InpSlippagePoints=10;
+extern int    InpSlippagePoints=100;
 extern double InpMaxSpreadPips=2.0;
 extern bool   InpVerboseLog=true;
 extern bool   InpNettingEmulation=false;
