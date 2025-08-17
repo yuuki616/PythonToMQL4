@@ -46,7 +46,7 @@ void BuildGrid()
 }
 
 //---- close all positions and orders
-void FullClose()
+void FullClose(bool restart=true)
 {
    for(int i=OrdersTotal()-1; i>=0; i--)
    {
@@ -63,7 +63,7 @@ void FullClose()
       }
    }
    DoneLoops++;
-   if(DoneLoops <= LoopCount) BuildGrid();
+   if(restart && DoneLoops <= LoopCount) BuildGrid();
 }
 
 //---- handle partial profit and reversal
@@ -92,8 +92,9 @@ void HandlePartial(int ticket, int type, double openPrice)
       OrderModify(ticket, openPrice, openPrice, 0, 0, clrYellow);
 
       // place reverse stop at break-even
-      int revType = (type==OP_BUY)?OP_SELLSTOP:OP_BUYSTOP;
-      OrderSend(SymbolName, revType, BaseLot, openPrice, DEVIATION, 0, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
+      int    revType = (type==OP_BUY)?OP_SELLSTOP:OP_BUYSTOP;
+      double sl      = NormalizeDouble((type==OP_BUY)?openPrice + StepPts:openPrice - StepPts, PriceDigits);
+      OrderSend(SymbolName, revType, BaseLot, openPrice, DEVIATION, sl, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
    }
 }
 
@@ -146,5 +147,5 @@ void OnTick()
 //---- expert deinitialization
 void OnDeinit(const int reason)
 {
-   FullClose();
+   FullClose(false);
 }
