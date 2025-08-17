@@ -29,8 +29,8 @@ void BuildGrid()
    {
       double buyPrice  = NormalizeDouble(MidPrice + StepPts*i, PriceDigits);
       double sellPrice = NormalizeDouble(MidPrice - StepPts*i, PriceDigits);
-      int buyTicket = OrderSend(SymbolName, OP_BUYSTOP, BaseLot, buyPrice, 3, 0, 0, "grid", MAGIC_NUMBER, 0, clrBlue);
-      int sellTicket = OrderSend(SymbolName, OP_SELLSTOP, BaseLot, sellPrice, 3, 0, 0, "grid", MAGIC_NUMBER, 0, clrRed);
+      int buyTicket = OrderSend(SymbolName, OP_BUYSTOP, BaseLot, buyPrice, 3, 0, 0, "basic grid", MAGIC_NUMBER, 0, clrBlue);
+      int sellTicket = OrderSend(SymbolName, OP_SELLSTOP, BaseLot, sellPrice, 3, 0, 0, "basic grid", MAGIC_NUMBER, 0, clrRed);
       if(i == OrdersPerSide)
       {
          double tpBuy  = NormalizeDouble(buyPrice + StepPts, PriceDigits);
@@ -68,26 +68,29 @@ void HandlePartial(int ticket, int type, double openPrice)
 {
    double ask = MarketInfo(SymbolName, MODE_ASK);
    double bid = MarketInfo(SymbolName, MODE_BID);
-   if(OrderSelect(ticket, SELECT_BY_TICKET))
-   {
-      // move SL to break-even
-      OrderModify(ticket, openPrice, openPrice, (type==OP_BUY)?TPHigh:TPLow, 0, clrYellow);
-   }
-   // place reverse stop at break-even
-   int revType = (type==OP_BUY)?OP_SELLSTOP:OP_BUYSTOP;
-   OrderSend(SymbolName, revType, BaseLot, openPrice, 3, 0, 0, "BE rev", MAGIC_NUMBER, 0, clrMagenta);
+   if(!OrderSelect(ticket, SELECT_BY_TICKET)) return;
 
-   // close remainder instantly if beyond initial mid price
-   bool beyond = (type==OP_BUY && ask >= MidPrice) || (type==OP_SELL && bid <= MidPrice);
-   if(beyond && OrderSelect(ticket, SELECT_BY_TICKET))
+   string comment = OrderComment();
+
+   if(StringFind(comment, "BE-REV", 0) == 0)
    {
-      double price = (type==OP_BUY)?Bid:Ask;
-      OrderClose(ticket, OrderLots(), price, 0, clrGreen);
+      bool beyond = (type==OP_BUY && bid >= MidPrice) || (type==OP_SELL && ask <= MidPrice);
+      if(beyond)
+      {
+         double price = (type==OP_BUY)?Bid:Ask;
+         OrderClose(ticket, OrderLots(), price, 0, clrGreen);
+         return;
+      }
+      OrderModify(ticket, openPrice, openPrice, MidPrice, 0, clrYellow);
    }
-   else if(OrderSelect(ticket, SELECT_BY_TICKET))
+   else
    {
-      double tp = MidPrice;
-      OrderModify(ticket, openPrice, openPrice, tp, 0, clrYellow);
+      // move SL to break-even and remove TP
+      OrderModify(ticket, openPrice, openPrice, 0, 0, clrYellow);
+
+      // place reverse stop at break-even
+      int revType = (type==OP_BUY)?OP_SELLSTOP:OP_BUYSTOP;
+      OrderSend(SymbolName, revType, BaseLot, openPrice, 3, 0, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
    }
 }
 
