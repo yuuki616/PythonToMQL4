@@ -33,9 +33,12 @@ double NormalizeLots(double lot){
 
 void Pend(int type,double price,double sl,double tp,string tag){
    double lot=NormalizeLots(InpBaseLot);
+   double nprice=NormalizeDouble(price,Digits);
+   double nsl=NormalizeDouble(sl,Digits);
+   double ntp=NormalizeDouble(tp,Digits);
    if(InpVerboseLog)
-      Print("[PEND] type=",type," price=",DoubleToString(price,Digits)," tp=",DoubleToString(tp,Digits)," lot=",lot," tag=",tag);
-   int ticket=OrderSend(Symbol(),type,lot,price,InpSlippagePoints,sl,tp,tag,InpMagic,0,clrNONE);
+      Print("[PEND] type=",type," price=",DoubleToString(nprice,Digits)," tp=",DoubleToString(ntp,Digits)," lot=",lot," tag=",tag);
+   int ticket=OrderSend(Symbol(),type,lot,nprice,InpSlippagePoints,nsl,ntp,tag,InpMagic,0,clrNONE);
    if(ticket<=0 && InpVerboseLog)
       Print("OrderSend failed err=",GetLastError());
 }
@@ -43,11 +46,12 @@ void Pend(int type,double price,double sl,double tp,string tag){
 void PlaceBERev(int type,double be){
    int otype= type==OP_BUY ? OP_SELLSTOP : OP_BUYSTOP;
    double sl = type==OP_BUY ? be+stepPts*Point : be-stepPts*Point;
-   Pend(otype,be,NormalizeDouble(sl,Digits),0,"BE-REV");
+   Pend(otype,NormalizeDouble(be,Digits),NormalizeDouble(sl,Digits),0,"BE-REV");
 }
 
 void HandlePartial(int ticket,int type){
    if(!OrderSelect(ticket,SELECT_BY_TICKET)) return;
+   RefreshRates();
    double bePrice=NormalizeDouble(OrderOpenPrice(),Digits);
    if(StringFind(OrderComment(),"BE-REV")==0){
       bool beyond = (type==OP_BUY && Bid>=mid) || (type==OP_SELL && Ask<=mid);
@@ -126,16 +130,18 @@ void Monitor(){
             double trg = (OrderType()==OP_BUY) ? OrderOpenPrice()+stepPts*Point : OrderOpenPrice()-stepPts*Point;
             bool hit = (OrderType()==OP_BUY && Bid>=trg) || (OrderType()==OP_SELL && Ask<=trg);
             if(hit && MathAbs(OrderLots()-InpBaseLot)<0.0000001){
-               bool ok=OrderClose(OrderTicket(),half,(OrderType()==OP_BUY?Bid:Ask),InpSlippagePoints);
+               int ticket=OrderTicket();
+               int type=OrderType();
+               bool ok=OrderClose(ticket,half,(type==OP_BUY?Bid:Ask),InpSlippagePoints);
                if(ok){
-                  HandlePartial(OrderTicket(),OrderType());
+                  HandlePartial(ticket,type);
                }else if(InpVerboseLog){
                   Print("partial TP failed err=",GetLastError());
                }
             }
-         }
-      }
-   }
+        }
+     }
+  }
 }
 
 int OnInit(){
