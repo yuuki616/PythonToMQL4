@@ -7,7 +7,6 @@ extern double InpMaxSpreadPips=2.0;
 extern bool   InpVerboseLog=true;
 extern bool   InpNettingEmulation=false;
 extern int    InpTimerSec=1;
-extern string InpSymbol="XAUUSD";
 extern int    InpOrdersSide=10;
 extern double InpGridMultiplier=2.0;
 extern int    InpLoopCount=0;
@@ -57,9 +56,11 @@ void HandlePartial(int ticket,int type){
          if(!ok && InpVerboseLog) Print("mid-instant TP failed err=",GetLastError());
          return;
       }
-      OrderModify(ticket,OrderOpenPrice(),bePrice,NormalizeDouble(mid,Digits),0,clrNONE);
+      bool ok=OrderModify(ticket,OrderOpenPrice(),bePrice,NormalizeDouble(mid,Digits),0,clrNONE);
+      if(!ok && InpVerboseLog) Print("OrderModify failed err=",GetLastError());
    }else{
-      OrderModify(ticket,OrderOpenPrice(),bePrice,0,0,clrNONE);
+      bool ok=OrderModify(ticket,OrderOpenPrice(),bePrice,0,0,clrNONE);
+      if(!ok && InpVerboseLog) Print("OrderModify failed err=",GetLastError());
       PlaceBERev(type,bePrice);
    }
 }
@@ -87,6 +88,7 @@ void BuildGrid(){
 }
 
 void FullClose(){
+   RefreshRates();
    for(int i=OrdersTotal()-1;i>=0;i--){
       if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)){
          if(OrderMagicNumber()!=InpMagic || OrderSymbol()!=Symbol()) continue;
