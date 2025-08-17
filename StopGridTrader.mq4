@@ -19,25 +19,27 @@ int    DoneLoops = 0;
 //---- build grid of pending orders
 void BuildGrid()
 {
-   double ask = MarketInfo(SymbolName, MODE_ASK);
-   double bid = MarketInfo(SymbolName, MODE_BID);
-   double spread = (ask - bid);
-   MidPrice = (ask + bid) / 2.0;
-   StepPts = spread * GridMultiplier;
+   double ask   = MarketInfo(SymbolName, MODE_ASK);
+   double bid   = MarketInfo(SymbolName, MODE_BID);
+   double point = MarketInfo(SymbolName, MODE_POINT);
+   MidPrice     = NormalizeDouble((ask + bid) / 2.0, PriceDigits);
+   int rawPts   = (int)MathRound((ask - bid) / point);
+   int stepInt  = (int)(rawPts * GridMultiplier);
+   StepPts      = NormalizeDouble(stepInt * point, PriceDigits);
    TPHigh = 0; TPLow = 0;
 
    for(int i=1;i<=OrdersPerSide;i++)
    {
       double buyPrice  = NormalizeDouble(MidPrice + StepPts*i, PriceDigits);
       double sellPrice = NormalizeDouble(MidPrice - StepPts*i, PriceDigits);
-      int buyTicket = OrderSend(SymbolName, OP_BUYSTOP, BaseLot, buyPrice, DEVIATION, 0, 0, "basic grid", MAGIC_NUMBER, 0, clrBlue);
-      int sellTicket = OrderSend(SymbolName, OP_SELLSTOP, BaseLot, sellPrice, DEVIATION, 0, 0, "basic grid", MAGIC_NUMBER, 0, clrRed);
+      int buyTicket  = OrderSend(SymbolName, OP_BUYSTOP, BaseLot, buyPrice, DEVIATION, MidPrice, 0, "basic grid", MAGIC_NUMBER, 0, clrBlue);
+      int sellTicket = OrderSend(SymbolName, OP_SELLSTOP, BaseLot, sellPrice, DEVIATION, MidPrice, 0, "basic grid", MAGIC_NUMBER, 0, clrRed);
       if(i == OrdersPerSide)
       {
          double tpBuy  = NormalizeDouble(buyPrice + StepPts, PriceDigits);
          double tpSell = NormalizeDouble(sellPrice - StepPts, PriceDigits);
-         if(buyTicket > 0)  OrderModify(buyTicket, buyPrice, 0, tpBuy, 0, clrBlue);
-         if(sellTicket > 0) OrderModify(sellTicket, sellPrice, 0, tpSell, 0, clrRed);
+         if(buyTicket > 0)  OrderModify(buyTicket, buyPrice, MidPrice, tpBuy, 0, clrBlue);
+         if(sellTicket > 0) OrderModify(sellTicket, sellPrice, MidPrice, tpSell, 0, clrRed);
          TPHigh = tpBuy; TPLow = tpSell;
       }
    }
