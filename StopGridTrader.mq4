@@ -27,35 +27,35 @@ void BuildGrid()
    StepPts      = NormalizeDouble(stepInt * point, PriceDigits);
    TPHigh = 0; TPLow = 0;
 
-   for(int i=1;i<=OrdersPerSide;i++)
+   for (int i = 1; i <= OrdersPerSide; i++)
    {
-      double buyPrice  = NormalizeDouble(MidPrice + StepPts*i, PriceDigits);
-      double sellPrice = NormalizeDouble(MidPrice - StepPts*i, PriceDigits);
+      double buyPrice  = NormalizeDouble(MidPrice + StepPts * i, PriceDigits);
+      double sellPrice = NormalizeDouble(MidPrice - StepPts * i, PriceDigits);
       int buyTicket  = OrderSend(SymbolName, OP_BUYSTOP, BaseLot, buyPrice, DEVIATION, MidPrice, 0, "basic grid", MAGIC_NUMBER, 0, clrBlue);
       int sellTicket = OrderSend(SymbolName, OP_SELLSTOP, BaseLot, sellPrice, DEVIATION, MidPrice, 0, "basic grid", MAGIC_NUMBER, 0, clrRed);
-      if(i == OrdersPerSide)
+      if (i == OrdersPerSide)
       {
          double tpBuy  = NormalizeDouble(buyPrice + StepPts, PriceDigits);
          double tpSell = NormalizeDouble(sellPrice - StepPts, PriceDigits);
-         if(buyTicket > 0)  OrderModify(buyTicket, buyPrice, MidPrice, tpBuy, 0, clrBlue);
-         if(sellTicket > 0) OrderModify(sellTicket, sellPrice, MidPrice, tpSell, 0, clrRed);
+         if (buyTicket > 0)  OrderModify(buyTicket, buyPrice, MidPrice, tpBuy, 0, clrBlue);
+         if (sellTicket > 0) OrderModify(sellTicket, sellPrice, MidPrice, tpSell, 0, clrRed);
          TPHigh = tpBuy; TPLow = tpSell;
       }
    }
 }
 
 //---- close all positions and orders
-void FullClose(bool restart=true)
+void FullClose(bool restart = true)
 {
    double ask = MarketInfo(SymbolName, MODE_ASK);
    double bid = MarketInfo(SymbolName, MODE_BID);
-   for(int i=OrdersTotal()-1; i>=0; i--)
+   for (int i = OrdersTotal() - 1; i >= 0; i--)
    {
-      if(!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) continue;
-      if(OrderSymbol()!=SymbolName || OrderMagicNumber()!=MAGIC_NUMBER) continue;
-      if(OrderType()<=OP_SELL)
+      if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) continue;
+      if (OrderSymbol() != SymbolName || OrderMagicNumber() != MAGIC_NUMBER) continue;
+      if (OrderType() <= OP_SELL)
       {
-         double price = (OrderType()==OP_BUY)?bid:ask;
+         double price = (OrderType() == OP_BUY) ? bid : ask;
          OrderClose(OrderTicket(), OrderLots(), price, DEVIATION, clrGreen);
       }
       else
@@ -64,7 +64,7 @@ void FullClose(bool restart=true)
       }
    }
    DoneLoops++;
-   if(restart && DoneLoops <= LoopCount) BuildGrid();
+   if (restart && DoneLoops <= LoopCount) BuildGrid();
 }
 
 //---- handle partial profit and reversal
@@ -72,16 +72,16 @@ void HandlePartial(int ticket, int type, double openPrice)
 {
    double ask = MarketInfo(SymbolName, MODE_ASK);
    double bid = MarketInfo(SymbolName, MODE_BID);
-   if(!OrderSelect(ticket, SELECT_BY_TICKET)) return;
+   if (!OrderSelect(ticket, SELECT_BY_TICKET)) return;
 
    string comment = OrderComment();
 
-   if(StringFind(comment, "BE-REV", 0) == 0)
+   if (StringFind(comment, "BE-REV", 0) == 0)
    {
-      bool beyond = (type==OP_BUY && bid >= MidPrice) || (type==OP_SELL && ask <= MidPrice);
-      if(beyond)
+      bool beyond = (type == OP_BUY && bid >= MidPrice) || (type == OP_SELL && ask <= MidPrice);
+      if (beyond)
       {
-         double price = (type==OP_BUY)?bid:ask;
+         double price = (type == OP_BUY) ? bid : ask;
          OrderClose(ticket, OrderLots(), price, DEVIATION, clrGreen);
          return;
       }
@@ -93,8 +93,8 @@ void HandlePartial(int ticket, int type, double openPrice)
       OrderModify(ticket, openPrice, openPrice, 0, 0, clrYellow);
 
       // place reverse stop at break-even
-      int    revType = (type==OP_BUY)?OP_SELLSTOP:OP_BUYSTOP;
-      double sl      = NormalizeDouble((type==OP_BUY)?openPrice + StepPts:openPrice - StepPts, PriceDigits);
+      int    revType = (type == OP_BUY) ? OP_SELLSTOP : OP_BUYSTOP;
+      double sl      = NormalizeDouble((type == OP_BUY) ? openPrice + StepPts : openPrice - StepPts, PriceDigits);
       OrderSend(SymbolName, revType, BaseLot, openPrice, DEVIATION, sl, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
    }
 }
@@ -105,21 +105,21 @@ void CheckPartial()
    double ask = MarketInfo(SymbolName, MODE_ASK);
    double bid = MarketInfo(SymbolName, MODE_BID);
    // iterate backwards so closing a position doesn't skip the next one
-   for(int i=OrdersTotal()-1; i>=0; i--)
+   for (int i = OrdersTotal() - 1; i >= 0; i--)
    {
-      if(!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) continue;
-      if(OrderSymbol()!=SymbolName || OrderMagicNumber()!=MAGIC_NUMBER) continue;
-      if(OrderType()>OP_SELL) continue;
-      double trg = (OrderType()==OP_BUY) ? OrderOpenPrice()+StepPts : OrderOpenPrice()-StepPts;
-      bool hit = (OrderType()==OP_BUY && bid >= trg) || (OrderType()==OP_SELL && ask <= trg);
-      if(hit && MathAbs(OrderLots()-BaseLot) < 0.000001)
+      if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) continue;
+      if (OrderSymbol() != SymbolName || OrderMagicNumber() != MAGIC_NUMBER) continue;
+      if (OrderType() > OP_SELL) continue;
+      double trg = (OrderType() == OP_BUY) ? OrderOpenPrice() + StepPts : OrderOpenPrice() - StepPts;
+      bool hit = (OrderType() == OP_BUY && bid >= trg) || (OrderType() == OP_SELL && ask <= trg);
+      if (hit && MathAbs(OrderLots() - BaseLot) < 0.000001)
       {
          int ticket = OrderTicket();
          double openPrice = OrderOpenPrice();
          int type = OrderType();
-         double price = (type==OP_BUY)?bid:ask;
-         double half = BaseLot/2.0;
-         if(OrderClose(ticket, half, price, DEVIATION, clrGreen))
+         double price = (type == OP_BUY) ? bid : ask;
+         double half = BaseLot / 2.0;
+         if (OrderClose(ticket, half, price, DEVIATION, clrGreen))
             HandlePartial(ticket, type, openPrice);
       }
    }
@@ -129,7 +129,7 @@ void CheckPartial()
 int OnInit()
 {
    int lot100 = (int)MathRound(BaseLot * 100);
-   if(PriceDigits < 0 || lot100 < 2 || lot100 % 2 != 0 ||
+   if (PriceDigits < 0 || lot100 < 2 || lot100 % 2 != 0 ||
       OrdersPerSide < 1 || GridMultiplier <= 0 || LoopCount < 0)
    {
       Print("Invalid input parameters");
@@ -145,7 +145,7 @@ void OnTick()
    double ask = MarketInfo(SymbolName, MODE_ASK);
    double bid = MarketInfo(SymbolName, MODE_BID);
    double mid = (ask + bid) / 2.0;
-   if((TPHigh>0 && mid >= TPHigh) || (TPLow>0 && mid <= TPLow))
+   if ((TPHigh > 0 && mid >= TPHigh) || (TPLow > 0 && mid <= TPLow))
    {
       FullClose();
       return;
