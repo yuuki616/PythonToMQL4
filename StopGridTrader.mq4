@@ -21,30 +21,32 @@ void BuildGrid()
    double ask   = MarketInfo(SymbolName, MODE_ASK);
    double bid   = MarketInfo(SymbolName, MODE_BID);
    double point = MarketInfo(SymbolName, MODE_POINT);
+   int    digits = (int)MarketInfo(SymbolName, MODE_DIGITS);
    MidPrice     = NormalizeDouble((ask + bid) / 2.0, PriceDigits);
+   double midSL = NormalizeDouble(MidPrice, digits);
    int rawPts   = (int)MathRound((ask - bid) / point);
    int stepInt  = (int)(rawPts * GridMultiplier);
-   StepPts      = NormalizeDouble(stepInt * point, PriceDigits);
+   StepPts      = stepInt * point;
    TPHigh = 0; TPLow = 0;
 
    for (int i = 1; i <= OrdersPerSide; i++)
    {
-      double buyPrice  = NormalizeDouble(MidPrice + StepPts * i, PriceDigits);
-      double sellPrice = NormalizeDouble(MidPrice - StepPts * i, PriceDigits);
-      int buyTicket  = OrderSend(SymbolName, OP_BUYSTOP, BaseLot, buyPrice, DEVIATION, MidPrice, 0, "basic grid", MAGIC_NUMBER, 0, clrBlue);
-      int sellTicket = OrderSend(SymbolName, OP_SELLSTOP, BaseLot, sellPrice, DEVIATION, MidPrice, 0, "basic grid", MAGIC_NUMBER, 0, clrRed);
+      double buyPrice  = NormalizeDouble(MidPrice + StepPts * i, digits);
+      double sellPrice = NormalizeDouble(MidPrice - StepPts * i, digits);
+      int buyTicket  = OrderSend(SymbolName, OP_BUYSTOP, BaseLot, buyPrice, DEVIATION, midSL, 0, "basic grid", MAGIC_NUMBER, 0, clrBlue);
+      int sellTicket = OrderSend(SymbolName, OP_SELLSTOP, BaseLot, sellPrice, DEVIATION, midSL, 0, "basic grid", MAGIC_NUMBER, 0, clrRed);
       if (i == OrdersPerSide)
       {
-         double tpBuy  = NormalizeDouble(buyPrice + StepPts, PriceDigits);
-         double tpSell = NormalizeDouble(sellPrice - StepPts, PriceDigits);
+         double tpBuy  = NormalizeDouble(buyPrice + StepPts, digits);
+         double tpSell = NormalizeDouble(sellPrice - StepPts, digits);
          if (buyTicket > 0)
          {
-            if (!OrderModify(buyTicket, buyPrice, MidPrice, tpBuy, 0, clrBlue))
+            if (!OrderModify(buyTicket, buyPrice, midSL, tpBuy, 0, clrBlue))
                Print("OrderModify failed for buyTicket", buyTicket, " error:", GetLastError());
          }
          if (sellTicket > 0)
          {
-            if (!OrderModify(sellTicket, sellPrice, MidPrice, tpSell, 0, clrRed))
+            if (!OrderModify(sellTicket, sellPrice, midSL, tpSell, 0, clrRed))
                Print("OrderModify failed for sellTicket", sellTicket, " error:", GetLastError());
          }
          TPHigh = tpBuy; TPLow = tpSell;
@@ -96,7 +98,9 @@ void HandlePartial(int ticket, int type, double openPrice)
             Print("OrderClose failed: ", GetLastError());
          return;
       }
-      if (!OrderModify(ticket, openPrice, openPrice, MidPrice, 0, clrYellow))
+      int digits = (int)MarketInfo(SymbolName, MODE_DIGITS);
+      double midTP = NormalizeDouble(MidPrice, digits);
+      if (!OrderModify(ticket, openPrice, openPrice, midTP, 0, clrYellow))
          Print("OrderModify failed: ", GetLastError());
    }
    else
@@ -107,7 +111,8 @@ void HandlePartial(int ticket, int type, double openPrice)
 
       // place reverse stop at break-even
       int    revType = (type == OP_BUY) ? OP_SELLSTOP : OP_BUYSTOP;
-      double sl      = NormalizeDouble((type == OP_BUY) ? openPrice + StepPts : openPrice - StepPts, PriceDigits);
+      int    digits  = (int)MarketInfo(SymbolName, MODE_DIGITS);
+      double sl      = NormalizeDouble((type == OP_BUY) ? openPrice + StepPts : openPrice - StepPts, digits);
       int revTicket = OrderSend(SymbolName, revType, BaseLot, openPrice, DEVIATION, sl, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
       if (revTicket < 0)
          Print("OrderSend failed: ", GetLastError());
