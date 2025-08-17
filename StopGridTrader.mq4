@@ -37,8 +37,16 @@ void BuildGrid()
       {
          double tpBuy  = NormalizeDouble(buyPrice + StepPts, PriceDigits);
          double tpSell = NormalizeDouble(sellPrice - StepPts, PriceDigits);
-         if (buyTicket > 0)  OrderModify(buyTicket, buyPrice, MidPrice, tpBuy, 0, clrBlue);
-         if (sellTicket > 0) OrderModify(sellTicket, sellPrice, MidPrice, tpSell, 0, clrRed);
+         if (buyTicket > 0)
+         {
+            if (!OrderModify(buyTicket, buyPrice, MidPrice, tpBuy, 0, clrBlue))
+               Print("OrderModify failed for buyTicket", buyTicket, " error:", GetLastError());
+         }
+         if (sellTicket > 0)
+         {
+            if (!OrderModify(sellTicket, sellPrice, MidPrice, tpSell, 0, clrRed))
+               Print("OrderModify failed for sellTicket", sellTicket, " error:", GetLastError());
+         }
          TPHigh = tpBuy; TPLow = tpSell;
       }
    }
@@ -56,11 +64,13 @@ void FullClose(bool restart = true)
       if (OrderType() <= OP_SELL)
       {
          double price = (OrderType() == OP_BUY) ? bid : ask;
-         OrderClose(OrderTicket(), OrderLots(), price, DEVIATION, clrGreen);
+         if (!OrderClose(OrderTicket(), OrderLots(), price, DEVIATION, clrGreen))
+            Print("OrderClose failed: ", GetLastError());
       }
       else
       {
-         OrderDelete(OrderTicket());
+         if (!OrderDelete(OrderTicket()))
+            Print("OrderDelete failed: ", GetLastError());
       }
    }
    DoneLoops++;
@@ -82,20 +92,25 @@ void HandlePartial(int ticket, int type, double openPrice)
       if (beyond)
       {
          double price = (type == OP_BUY) ? bid : ask;
-         OrderClose(ticket, OrderLots(), price, DEVIATION, clrGreen);
+         if (!OrderClose(ticket, OrderLots(), price, DEVIATION, clrGreen))
+            Print("OrderClose failed: ", GetLastError());
          return;
       }
-      OrderModify(ticket, openPrice, openPrice, MidPrice, 0, clrYellow);
+      if (!OrderModify(ticket, openPrice, openPrice, MidPrice, 0, clrYellow))
+         Print("OrderModify failed: ", GetLastError());
    }
    else
    {
       // move SL to break-even and remove TP
-      OrderModify(ticket, openPrice, openPrice, 0, 0, clrYellow);
+      if (!OrderModify(ticket, openPrice, openPrice, 0, 0, clrYellow))
+         Print("OrderModify failed: ", GetLastError());
 
       // place reverse stop at break-even
       int    revType = (type == OP_BUY) ? OP_SELLSTOP : OP_BUYSTOP;
       double sl      = NormalizeDouble((type == OP_BUY) ? openPrice + StepPts : openPrice - StepPts, PriceDigits);
-      OrderSend(SymbolName, revType, BaseLot, openPrice, DEVIATION, sl, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
+      int revTicket = OrderSend(SymbolName, revType, BaseLot, openPrice, DEVIATION, sl, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
+      if (revTicket < 0)
+         Print("OrderSend failed: ", GetLastError());
    }
 }
 
