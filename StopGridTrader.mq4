@@ -104,7 +104,8 @@ void CheckPartial()
 {
    double ask = MarketInfo(SymbolName, MODE_ASK);
    double bid = MarketInfo(SymbolName, MODE_BID);
-   for(int i=0;i<OrdersTotal();i++)
+   // iterate backwards so closing a position doesn't skip the next one
+   for(int i=OrdersTotal()-1; i>=0; i--)
    {
       if(!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) continue;
       if(OrderSymbol()!=SymbolName || OrderMagicNumber()!=MAGIC_NUMBER) continue;
