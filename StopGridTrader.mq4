@@ -23,7 +23,8 @@ void BuildGrid()
    double point = MarketInfo(SymbolName, MODE_POINT);
    int    digits = (int)MarketInfo(SymbolName, MODE_DIGITS);
    MidPrice     = NormalizeDouble((ask + bid) / 2.0, PriceDigits);
-   double midSL = NormalizeDouble(MidPrice, digits);
+   // stop-loss for all pending orders is the rounded mid-price
+   double midSL = NormalizeDouble(MidPrice, PriceDigits);
    int rawPts   = (int)MathRound((ask - bid) / point);
    int stepInt  = (int)(rawPts * GridMultiplier);
    StepPts      = stepInt * point;
@@ -86,10 +87,8 @@ void HandlePartial(int ticket, int type, double openPrice)
    double bid = MarketInfo(SymbolName, MODE_BID);
    if (!OrderSelect(ticket, SELECT_BY_TICKET)) return;
 
-   int digits = (int)MarketInfo(SymbolName, MODE_DIGITS);
-   // break-even price rounded to user-specified digits, then to symbol digits
-   double be      = NormalizeDouble(openPrice, PriceDigits);
-   double bePrice = NormalizeDouble(be, digits);
+   // break-even price rounded to user-specified digits
+   double bePrice = NormalizeDouble(openPrice, PriceDigits);
 
    string comment = OrderComment();
 
@@ -103,7 +102,7 @@ void HandlePartial(int ticket, int type, double openPrice)
             Print("OrderClose failed: ", GetLastError());
          return;
       }
-      double midTP = NormalizeDouble(MidPrice, digits);
+      double midTP = NormalizeDouble(MidPrice, PriceDigits);
       if (!OrderModify(ticket, bePrice, bePrice, midTP, 0, clrYellow))
          Print("OrderModify failed: ", GetLastError());
    }
@@ -115,7 +114,7 @@ void HandlePartial(int ticket, int type, double openPrice)
 
       // place reverse stop at break-even
       int    revType = (type == OP_BUY) ? OP_SELLSTOP : OP_BUYSTOP;
-      double sl      = NormalizeDouble((type == OP_BUY) ? bePrice + StepPts : bePrice - StepPts, digits);
+      double sl      = NormalizeDouble((type == OP_BUY) ? bePrice + StepPts : bePrice - StepPts, PriceDigits);
       int revTicket = OrderSend(SymbolName, revType, BaseLot, bePrice, DEVIATION, sl, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
       if (revTicket < 0)
          Print("OrderSend failed: ", GetLastError());
