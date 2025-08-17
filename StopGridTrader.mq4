@@ -1,5 +1,4 @@
 #property strict
-#property indicator_chart_window
 
 input string  SymbolName      = "XAUUSD";   // Symbol name
 input int     PriceDigits     = 2;           // Price digits
@@ -128,6 +127,13 @@ void CheckPartial()
 //---- expert initialization
 int OnInit()
 {
+   int lot100 = (int)MathRound(BaseLot * 100);
+   if(PriceDigits < 0 || lot100 < 2 || lot100 % 2 != 0 ||
+      OrdersPerSide < 1 || GridMultiplier <= 0 || LoopCount < 0)
+   {
+      Print("Invalid input parameters");
+      return(INIT_PARAMETERS_INCORRECT);
+   }
    BuildGrid();
    return(INIT_SUCCEEDED);
 }
