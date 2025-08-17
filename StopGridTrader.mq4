@@ -9,6 +9,7 @@ input double  GridMultiplier  = 2.0;         // Multiplier of spread for grid st
 input int     LoopCount       = 0;           // Number of grid restarts (0 = once)
 
 int    MAGIC_NUMBER = 0;
+int    DEVIATION    = 100;
 double StepPts = 0.0;
 double MidPrice = 0.0;
 double TPHigh = 0.0;
@@ -29,8 +30,8 @@ void BuildGrid()
    {
       double buyPrice  = NormalizeDouble(MidPrice + StepPts*i, PriceDigits);
       double sellPrice = NormalizeDouble(MidPrice - StepPts*i, PriceDigits);
-      int buyTicket = OrderSend(SymbolName, OP_BUYSTOP, BaseLot, buyPrice, 3, 0, 0, "basic grid", MAGIC_NUMBER, 0, clrBlue);
-      int sellTicket = OrderSend(SymbolName, OP_SELLSTOP, BaseLot, sellPrice, 3, 0, 0, "basic grid", MAGIC_NUMBER, 0, clrRed);
+      int buyTicket = OrderSend(SymbolName, OP_BUYSTOP, BaseLot, buyPrice, DEVIATION, 0, 0, "basic grid", MAGIC_NUMBER, 0, clrBlue);
+      int sellTicket = OrderSend(SymbolName, OP_SELLSTOP, BaseLot, sellPrice, DEVIATION, 0, 0, "basic grid", MAGIC_NUMBER, 0, clrRed);
       if(i == OrdersPerSide)
       {
          double tpBuy  = NormalizeDouble(buyPrice + StepPts, PriceDigits);
@@ -52,7 +53,7 @@ void FullClose()
       if(OrderType()<=OP_SELL)
       {
          double price = (OrderType()==OP_BUY)?Bid:Ask;
-         OrderClose(OrderTicket(), OrderLots(), price, 0, clrGreen);
+         OrderClose(OrderTicket(), OrderLots(), price, DEVIATION, clrGreen);
       }
       else
       {
@@ -78,7 +79,7 @@ void HandlePartial(int ticket, int type, double openPrice)
       if(beyond)
       {
          double price = (type==OP_BUY)?Bid:Ask;
-         OrderClose(ticket, OrderLots(), price, 0, clrGreen);
+         OrderClose(ticket, OrderLots(), price, DEVIATION, clrGreen);
          return;
       }
       OrderModify(ticket, openPrice, openPrice, MidPrice, 0, clrYellow);
@@ -90,7 +91,7 @@ void HandlePartial(int ticket, int type, double openPrice)
 
       // place reverse stop at break-even
       int revType = (type==OP_BUY)?OP_SELLSTOP:OP_BUYSTOP;
-      OrderSend(SymbolName, revType, BaseLot, openPrice, 3, 0, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
+      OrderSend(SymbolName, revType, BaseLot, openPrice, DEVIATION, 0, 0, "BE-REV", MAGIC_NUMBER, 0, clrMagenta);
    }
 }
 
@@ -113,7 +114,7 @@ void CheckPartial()
          int type = OrderType();
          double price = (type==OP_BUY)?bid:ask;
          double half = BaseLot/2.0;
-         if(OrderClose(ticket, half, price, 0, clrGreen))
+         if(OrderClose(ticket, half, price, DEVIATION, clrGreen))
             HandlePartial(ticket, type, openPrice);
       }
    }
