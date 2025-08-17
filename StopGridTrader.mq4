@@ -48,13 +48,15 @@ void BuildGrid()
 //---- close all positions and orders
 void FullClose(bool restart=true)
 {
+   double ask = MarketInfo(SymbolName, MODE_ASK);
+   double bid = MarketInfo(SymbolName, MODE_BID);
    for(int i=OrdersTotal()-1; i>=0; i--)
    {
       if(!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) continue;
       if(OrderSymbol()!=SymbolName || OrderMagicNumber()!=MAGIC_NUMBER) continue;
       if(OrderType()<=OP_SELL)
       {
-         double price = (OrderType()==OP_BUY)?Bid:Ask;
+         double price = (OrderType()==OP_BUY)?bid:ask;
          OrderClose(OrderTicket(), OrderLots(), price, DEVIATION, clrGreen);
       }
       else
@@ -80,7 +82,7 @@ void HandlePartial(int ticket, int type, double openPrice)
       bool beyond = (type==OP_BUY && bid >= MidPrice) || (type==OP_SELL && ask <= MidPrice);
       if(beyond)
       {
-         double price = (type==OP_BUY)?Bid:Ask;
+         double price = (type==OP_BUY)?bid:ask;
          OrderClose(ticket, OrderLots(), price, DEVIATION, clrGreen);
          return;
       }
